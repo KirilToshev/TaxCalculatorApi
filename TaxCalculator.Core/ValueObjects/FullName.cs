@@ -10,7 +10,7 @@ namespace TaxCalculator.Core.ValueObjects
 
         public static Result<FullName> Create(string fullName)
         {
-            if (!Regex.IsMatch(fullName, @"^[^\s]+( [\w]+)+$") || string.IsNullOrWhiteSpace(fullName))
+            if (string.IsNullOrWhiteSpace(fullName) || !Regex.IsMatch(fullName, @"(^[A-Za-z]{2,16})[ ]([A-Za-z]{2,16})"))
             {
                 return Result.Failure<FullName>("FullName – at least two words separated by space – allowed symbols letters and spaces only");
             }
