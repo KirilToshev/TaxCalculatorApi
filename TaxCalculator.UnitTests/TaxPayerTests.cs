@@ -1,153 +1,115 @@
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using TaxCalculator.Core.Configuration.Models;
-using TaxCalculator.Core.Models;
+using TaxCalculator.Core.Domain.Interfaces;
 
 namespace TaxCalculator.UnitTests
 {
-    public class TaxCalculatorTests
+    public class TaxPayerTests
     {
-        private readonly IOptionsSnapshot<TaxConfigurationOptions> _taxConfigMock;
-        private readonly TaxConfigurationOptions _taxConfig;
-        private Core.Domain.TaxCalculator _taxCalculator;
+        private readonly ITaxCalculator _taxCalculator;
 
-        public TaxCalculatorTests()
+        public TaxPayerTests()
         {
-            _taxConfigMock = Substitute.For<IOptionsSnapshot<TaxConfigurationOptions>>();
-            _taxConfig = new TaxConfigurationOptions();
-            _taxConfig.SocialContribution = new SocialContribution();
-            _taxConfigMock.Value.Returns(_taxConfig);
-            _taxCalculator = new Core.Domain.TaxCalculator(_taxConfigMock);
+            _taxCalculator = Substitute.For<ITaxCalculator>();
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(null)]
+        [InlineData("SingleNameOnly")]
+        [InlineData("@##% 85434")]
+        public void Create_ShouldFail_IfFullNameIsInvalid(string fullName)
+        {
+            // Act
+            var result = TaxPayer.Create(fullName, DateTime.Now, 1000m, "12345", 0);
+
+            // Assert
+            Assert.True(result.IsFailure);
+            Assert.Equal("FullName – at least two words separated by space – allowed symbols letters and spaces only",
+                result.Error);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(null)]
+        [InlineData("SingleNameOnly")]
+        [InlineData("8543")]
+        [InlineData("8543423423452342342")]
+        public void Create_ShouldFail_IfSsnIsInvalid(string ssn)
+        {
+            // Act
+            var result = TaxPayer.Create("Valid FullName", DateTime.Now, 0, ssn, 0);
+
+            // Assert
+            Assert.True(result.IsFailure);
+            Assert.Equal("A valid 5 to 10 digits number unique per tax payer", result.Error);
         }
 
         [Fact]
-        public void IsNotTaxable_ShouldReturnTrueAndValidCalculationResult_IfGrossIncomeIsSmallerThanMinTaxableAmount()
+        public void Create_ShouldFail_IfGrossIncomeIsInvalid()
         {
-            // Arrange
-            var taxConfig = new TaxConfigurationOptions();
-            taxConfig.MinTaxableAmount = 1000;
-            _taxConfigMock.Value.Returns(taxConfig);
-            var sut = new Core.Domain.TaxCalculator(_taxConfigMock);
-            var grossIncome = taxConfig.MinTaxableAmount - 1;
+            // Act
+            var invalidGrossIncome = 0m;
+            var result = TaxPayer.Create("Valid FullName", DateTime.Now, invalidGrossIncome, "12345", 0);
 
-            //Act
-            var isNotTaxable = sut.IsNotTaxable(grossIncome, out TaxCalculationResult? taxCalculationResult);
-
-            Assert.True(isNotTaxable);
-            Assert.Equal(grossIncome, taxCalculationResult!.GrossIncome);
+            // Assert
+            Assert.True(result.IsFailure);
+            Assert.Equal("Gross Income can not be negative or 0", result.Error);
         }
 
         [Fact]
-        public void IsNotTaxable_ShouldReturnFalseAndNull_IfGrossIncomeIsBiggerThanMinTaxableAmount()
+        public void Create_ShouldFail_IfCharitySpentIsInvalid()
         {
-            // Arrange
-            _taxConfig.MinTaxableAmount = 1000;
-            var grossIncome = _taxConfig.MinTaxableAmount + 1;
+            // Act
+            var invalidCharitySpent = -1m;
+            var result = TaxPayer.Create("Valid FullName", DateTime.Now, 1000m, "12345", invalidCharitySpent);
 
-            //Act
-            var isNotTaxable = _taxCalculator.IsNotTaxable(grossIncome, out TaxCalculationResult? taxCalculationResult);
-
-            Assert.False(isNotTaxable);
-            Assert.Equal(null, taxCalculationResult);
+            // Assert
+            Assert.True(result.IsFailure);
+            Assert.Equal("Charity Spent can not be negative", result.Error);
         }
 
+        [Fact]
+        public void Create_ShouldSuccessed_IfAllParameterAreValid()
+        {
+            // Act
+            var result = TaxPayer.Create("Valid FullName", DateTime.Now, 1000m, "12345", 0);
+
+            //Assert
+            Assert.True(result.IsSuccess);
+        }
 
         [Fact]
-        public void CalculateCharityAmount_ShouldReturnCharitySpentValue_IfCharitySpentIsLessThanMaxCharityRate()
+        public void CalculateTax_ShouldReturnCorrectlyCalculatedTax()
         {
             // Arrange
-
-            _taxConfig.MaxCharityRate = 0.1m;
             var grossIncome = 1000m;
-            var charitySpent = (grossIncome * _taxConfig.MaxCharityRate) - 1;
+            var taxPayer = TaxPayer.Create("Valid FullName", DateTime.Now, grossIncome, "12345", 0).Value;
+            var charityCalculation = 100m;
+            var taxableGrossIncome = 1000m;
+            var incomeTaxCalculation = 200m;
+            var socialTaxCalculation = 300m;
+            var totalTax = incomeTaxCalculation + socialTaxCalculation;
+            var netIncome = grossIncome - totalTax;
+            _taxCalculator.CalculateCharityAmount(Arg.Any<decimal>(), Arg.Any<decimal>())
+                .Returns(charityCalculation);
+            _taxCalculator.CalculateTaxableGrossIncome(Arg.Any<decimal>(), Arg.Any<decimal>())
+                .Returns(taxableGrossIncome);
+            _taxCalculator.CalculateIncomeTax(Arg.Any<decimal>())
+                .Returns(incomeTaxCalculation);
+            _taxCalculator.CalculateSocialTax(Arg.Any<decimal>())
+                .Returns(socialTaxCalculation);
 
-            //Act
-            var charityCalculation = _taxCalculator.CalculateCharityAmount(grossIncome, charitySpent);
+            // Act
+            var taxCalculationResult = taxPayer.CalculateTax(_taxCalculator);
 
-            Assert.Equal(charitySpent, charityCalculation);
-        }
-
-        [Fact]
-        public void CalculateCharityAmount_ShouldReturnMaxCharityValue_IfCharitySpentIsBiggerThanMaxCharityRate()
-        {
-            // Arrange
-
-            _taxConfig.MaxCharityRate = 0.1m;
-            var grossIncome = 1000m;
-            var expectedCalculation = (grossIncome * _taxConfig.MaxCharityRate);
-            var charitySpent = expectedCalculation + 1;
-
-            //Act
-            var charityCalculation = _taxCalculator.CalculateCharityAmount(grossIncome, charitySpent);
-
-            Assert.Equal(expectedCalculation, charityCalculation);
-        }
-
-        [Fact]
-        public void CalculateTaxableGrossIncome_ShouldSubstractCharitySpentFromGrossIncome()
-        {
-            // Arrange
-
-            var grossIncome = 1000m;
-            var charitySpent = grossIncome / 2;
-            var expectedCalculation = grossIncome - charitySpent;
-            
-            //Act
-            var charityCalculation = _taxCalculator.CalculateTaxableGrossIncome(grossIncome, charitySpent);
-
-            Assert.Equal(expectedCalculation, charityCalculation);
-        }
-
-        [Fact]
-        public void CalculateIncomeTax_ShouldSubstractMinTaxableAmountAndMultyplyByIncomeTax()
-        {
-            // Arrange
-
-            _taxConfig.MinTaxableAmount = 500m;
-            _taxConfig.IncomeTax = 0.1m;
-            var grossIncome = 1000m;
-            var expectedCalculation = (grossIncome - _taxConfig.MinTaxableAmount) * _taxConfig.IncomeTax;
-
-            //Act
-            var charityCalculation = _taxCalculator.CalculateIncomeTax(grossIncome);
-
-            Assert.Equal(expectedCalculation, charityCalculation);
-        }
-
-        [Fact]
-        public void CalculateSocialTax_ShouldUseGrossIncomeValueInCalculation_IfGrossIncomeIsSmallerThanTopTaxableAmount()
-        {
-            // Arrange
-
-            var grossIncome = 1000m;
-            _taxConfig.SocialContribution!.TopTaxableAmount = grossIncome + 1;
-            _taxConfig.SocialContribution!.Value = 0.1m;
-            _taxConfig.MinTaxableAmount = 500m;
-
-            var expectedCalculation = (grossIncome - _taxConfig.MinTaxableAmount) * _taxConfig.SocialContribution!.Value;
-            
-            //Act
-            var charityCalculation = _taxCalculator.CalculateSocialTax(grossIncome);
-
-            Assert.Equal(expectedCalculation, charityCalculation);
-        }
-
-        [Fact]
-        public void CalculateSocialTax_ShouldUseTopTaxableAmountValueInCalculation_IfGrossIncomeIsBiggerThanTopTaxableAmount()
-        {
-            // Arrange
-
-            var grossIncome = 1000m;
-            _taxConfig.SocialContribution!.TopTaxableAmount = grossIncome - 1;
-            _taxConfig.SocialContribution!.Value = 0.1m;
-            _taxConfig.MinTaxableAmount = 500m;
-
-            var expectedCalculation = (_taxConfig.SocialContribution!.TopTaxableAmount - _taxConfig.MinTaxableAmount) * _taxConfig.SocialContribution!.Value;
-
-            //Act
-            var charityCalculation = _taxCalculator.CalculateSocialTax(grossIncome);
-
-            Assert.Equal(expectedCalculation, charityCalculation);
+            // Assert
+            Assert.Equal(grossIncome, taxCalculationResult.GrossIncome);
+            Assert.Equal(charityCalculation, taxCalculationResult.CharitySpent);
+            Assert.Equal(incomeTaxCalculation, taxCalculationResult.IncomeTax);
+            Assert.Equal(socialTaxCalculation, taxCalculationResult.SocialTax);
+            Assert.Equal(netIncome, taxCalculationResult.TotalTax);
+            Assert.Equal(netIncome, taxCalculationResult.NetIncome);
         }
     }
 }
