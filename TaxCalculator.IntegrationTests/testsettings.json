@@ -1,0 +1,19 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "TaxConfig": {
+    "MinTaxableAmount": 1000,
+    "IncomeTax": 0.10,
+    "SocialContribution": {
+      "Value": 0.15,
+      "TopTaxableAmount": 3000
+    },
+    "MaxCharityRate": 0.10,
+    "CacheExpiration": 1
+  }
+}
