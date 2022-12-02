@@ -8,12 +8,12 @@ namespace TaxCalculator.Data
 {
     public class TaxPayerRepository : ITaxPayerRepository
     {
-        private readonly TaxConfigurationOptions _taxConfiguration;
+        private readonly TaxConfig _taxConfiguration;
         private readonly IMemoryCache _memoryCache;
 
         public TaxPayerRepository(
             IMemoryCache memoryCache,
-            IOptionsSnapshot<TaxConfigurationOptions> taxConfigurationOptions)
+            IOptionsSnapshot<TaxConfig> taxConfigurationOptions)
         {
             _taxConfiguration = taxConfigurationOptions.Value;
             _memoryCache = memoryCache;

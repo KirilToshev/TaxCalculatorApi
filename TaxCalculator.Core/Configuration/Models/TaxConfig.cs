@@ -1,6 +1,6 @@
 ﻿namespace TaxCalculator.Core.Configuration.Models
 {
-    public class TaxConfigurationOptions
+    public class TaxConfig
     {
         public decimal MinTaxableAmount { get; set; }
         public decimal IncomeTax { get; set; }

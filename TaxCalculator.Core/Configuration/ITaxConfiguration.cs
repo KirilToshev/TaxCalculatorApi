@@ -4,6 +4,6 @@ namespace TaxCalculator.Core.Configuration
 {
     public interface ITaxConfiguration
     {
-        Task<TaxConfigurationOptions> GetTaxConfiguration();
+        Task<TaxConfig> GetTaxConfiguration();
     }
 }

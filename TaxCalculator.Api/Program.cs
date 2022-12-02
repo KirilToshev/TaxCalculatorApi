@@ -14,7 +14,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddMemoryCache();
-builder.Services.Configure<TaxConfigurationOptions>(builder.Configuration.GetSection("TaxConfigurationOptions"));
+builder.Services.Configure<TaxConfig>(builder.Configuration.GetSection("TaxConfig"));
 builder.Services.AddScoped<ITaxConfiguration, TaxConfiguration>();
 builder.Services.AddScoped<ITaxPayerRepository, TaxPayerRepository>();
 builder.Services.AddScoped<ITaxCalculator, TaxCalculator.Core.Domain.TaxCalculator>();

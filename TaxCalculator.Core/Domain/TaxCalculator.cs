@@ -7,9 +7,9 @@ namespace TaxCalculator.Core.Domain
 {
     public class TaxCalculator : ITaxCalculator
     {
-        private readonly TaxConfigurationOptions _taxConfiguration;
+        private readonly TaxConfig _taxConfiguration;
 
-        public TaxCalculator(IOptionsSnapshot<TaxConfigurationOptions> taxConfiguration)
+        public TaxCalculator(IOptionsSnapshot<TaxConfig> taxConfiguration)
         {
             this._taxConfiguration = taxConfiguration.Value;
         }

@@ -7,14 +7,14 @@ namespace TaxCalculator.UnitTests
 {
     public class TaxCalculatorTests
     {
-        private readonly IOptionsSnapshot<TaxConfigurationOptions> _taxConfigMock;
-        private readonly TaxConfigurationOptions _taxConfig;
+        private readonly IOptionsSnapshot<TaxConfig> _taxConfigMock;
+        private readonly TaxConfig _taxConfig;
         private readonly Core.Domain.TaxCalculator _taxCalculator;
 
         public TaxCalculatorTests()
         {
-            _taxConfigMock = Substitute.For<IOptionsSnapshot<TaxConfigurationOptions>>();
-            _taxConfig = new TaxConfigurationOptions();
+            _taxConfigMock = Substitute.For<IOptionsSnapshot<TaxConfig>>();
+            _taxConfig = new TaxConfig();
             _taxConfig.SocialContribution = new SocialContribution();
             _taxConfigMock.Value.Returns(_taxConfig);
             _taxCalculator = new Core.Domain.TaxCalculator(_taxConfigMock);
@@ -24,7 +24,7 @@ namespace TaxCalculator.UnitTests
         public void IsNotTaxable_ShouldReturnTrueAndValidCalculationResult_IfGrossIncomeIsSmallerThanMinTaxableAmount()
         {
             // Arrange
-            var taxConfig = new TaxConfigurationOptions();
+            var taxConfig = new TaxConfig();
             taxConfig.MinTaxableAmount = 1000;
             _taxConfigMock.Value.Returns(taxConfig);
             var sut = new Core.Domain.TaxCalculator(_taxConfigMock);

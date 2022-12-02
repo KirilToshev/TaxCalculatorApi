@@ -6,14 +6,14 @@ namespace TaxCalculator.Api.Configuration
 {
     public class TaxConfiguration : ITaxConfiguration
     {
-        private readonly IOptionsSnapshot<TaxConfigurationOptions> _taxConfigurationOptions;
+        private readonly IOptionsSnapshot<TaxConfig> _taxConfigurationOptions;
 
-        public TaxConfiguration(IOptionsSnapshot<TaxConfigurationOptions> taxConfigurationOptions)
+        public TaxConfiguration(IOptionsSnapshot<TaxConfig> taxConfigurationOptions)
         {
             _taxConfigurationOptions = taxConfigurationOptions;
         }
 
-        public Task<TaxConfigurationOptions> GetTaxConfiguration()
+        public Task<TaxConfig> GetTaxConfiguration()
             => Task.FromResult(_taxConfigurationOptions.Value);
     }
 }
